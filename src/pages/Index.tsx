@@ -47,8 +47,22 @@ const Index = () => {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = selectedLanguage;
-      utterance.pitch = 1.2;
-      utterance.rate = 0.9;
+      utterance.pitch = 1.3;
+      utterance.rate = 1.0;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const femaleVoice = voices.find(voice => 
+        voice.lang.startsWith(selectedLanguage.split('-')[0]) && 
+        (voice.name.toLowerCase().includes('female') || 
+         voice.name.toLowerCase().includes('woman') ||
+         voice.name.toLowerCase().includes('алина') ||
+         voice.name.toLowerCase().includes('милена'))
+      ) || voices.find(voice => voice.lang.startsWith(selectedLanguage.split('-')[0]));
+      
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
+      
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utterance);
@@ -124,35 +138,47 @@ const Index = () => {
     recognitionRef.current = recognition;
   };
 
-  const handleChatSubmit = (e: React.FormEvent) => {
+  const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
     const userMessage: Message = { role: 'user', content: chatInput };
     setMessages(prev => [...prev, userMessage]);
+    setChatInput('');
 
-    const responses: Record<string, string> = {
-      'ru-RU': `Я Аиси, ваш голосовой помощник. Вы написали: "${chatInput}". Чем могу помочь?`,
-      'en-US': `I'm Aisi, your voice assistant. You wrote: "${chatInput}". How can I help?`,
-      'pt-BR': `Sou Aisi, sua assistente de voz. Você escreveu: "${chatInput}". Como posso ajudar?`,
-      'fr-FR': `Je suis Aisi, votre assistante vocale. Vous avez écrit: "${chatInput}". Comment puis-je vous aider?`,
-      'es-ES': `Soy Aisi, tu asistente de voz. Escribiste: "${chatInput}". ¿Cómo puedo ayudarte?`,
-      'de-DE': `Ich bin Aisi, Ihre Sprachassistentin. Sie schrieben: "${chatInput}". Wie kann ich helfen?`,
-      'it-IT': `Sono Aisi, la tua assistente vocale. Hai scritto: "${chatInput}". Come posso aiutarti?`,
-      'ja-JP': `私はAisiです、あなたの音声アシスタント。「${chatInput}」と書きました。どうお手伝いできますか？`,
-      'zh-CN': `我是Aisi，您的语音助手。您写道："${chatInput}"。我能帮您什么？`,
-    };
+    try {
+      const response = await fetch('https://functions.poehali.dev/278f6f6b-a05c-4f18-8242-468e1df7fc7e', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          language: selectedLanguage,
+          history: messages,
+        }),
+      });
 
-    setTimeout(() => {
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
       const assistantMessage: Message = {
         role: 'assistant',
-        content: responses[selectedLanguage] || responses['ru-RU'],
+        content: data.reply,
       };
+      
       setMessages(prev => [...prev, assistantMessage]);
-      speakText(assistantMessage.content);
-    }, 500);
-
-    setChatInput('');
+      speakText(data.reply);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'Извините, произошла ошибка. Пожалуйста, попробуйте еще раз.',
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   };
 
   useEffect(() => {
