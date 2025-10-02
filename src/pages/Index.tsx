@@ -20,7 +20,10 @@ const Index = () => {
   const [chatInput, setChatInput] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('ru-RU');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const scrollToSection = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -88,6 +91,40 @@ const Index = () => {
     }
   };
 
+  const startVoiceRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Ваш браузер не поддерживает распознавание речи. Попробуйте Chrome.');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = selectedLanguage;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(transcript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+  };
+
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -145,21 +182,34 @@ const Index = () => {
               Aisi
             </span>
           </div>
-          <div className="hidden md:flex gap-6">
-            {['Главная', 'Возможности', 'Демо', 'API', 'Контакты'].map((item, idx) => {
-              const id = ['home', 'features', 'demo', 'api', 'contacts'][idx];
-              return (
-                <button
-                  key={item}
-                  onClick={() => scrollToSection(id)}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    activeSection === id ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  {item}
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex gap-6">
+              {['Главная', 'Возможности', 'Демо', 'API', 'Контакты'].map((item, idx) => {
+                const id = ['home', 'features', 'demo', 'api', 'contacts'][idx];
+                return (
+                  <button
+                    key={item}
+                    onClick={() => scrollToSection(id)}
+                    className={`text-sm font-medium transition-colors hover:text-primary ${
+                      activeSection === id ? 'text-primary' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className="relative bg-gradient-to-br from-primary to-secondary text-white hover:opacity-90 rounded-full w-12 h-12 p-0"
+            >
+              <Icon name="MessageSquare" size={20} />
+              {messages.length > 0 && (
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                  {messages.length}
+                </div>
+              )}
+            </Button>
           </div>
         </div>
       </nav>
@@ -306,44 +356,63 @@ const Index = () => {
         </div>
       </section>
 
-      <section id="demo" className="py-20 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <h2 className="text-4xl font-bold text-center mb-8">Чат с Aisi</h2>
-          
-          <div className="flex justify-center gap-2 mb-6 flex-wrap">
-            {languages.map((lang) => (
-              <Button
-                key={lang.code}
-                variant={selectedLanguage === lang.code ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedLanguage(lang.code)}
-                className={selectedLanguage === lang.code ? 'bg-gradient-to-r from-primary to-secondary text-white' : 'border-border'}
-              >
-                <span className="mr-2">{lang.flag}</span>
-                {lang.name}
-              </Button>
-            ))}
-          </div>
-
-          <Card className="bg-gradient-to-br from-card to-card/50 border-border">
+      {isChatOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl bg-card border-border shadow-2xl animate-scale-in">
             <CardContent className="pt-6">
-              <div className="h-96 overflow-y-auto mb-4 space-y-4 px-2">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <Icon name="Bot" size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Чат с Aisi</h3>
+                    <p className="text-sm text-muted-foreground">Голосовой AI-ассистент</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsChatOpen(false)}
+                  className="rounded-full"
+                >
+                  <Icon name="X" size={20} />
+                </Button>
+              </div>
+
+              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                {languages.map((lang) => (
+                  <Button
+                    key={lang.code}
+                    variant={selectedLanguage === lang.code ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedLanguage(lang.code)}
+                    className={`flex-shrink-0 ${selectedLanguage === lang.code ? 'bg-gradient-to-r from-primary to-secondary text-white' : 'border-border'}`}
+                  >
+                    <span className="mr-1">{lang.flag}</span>
+                    {lang.name}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="h-96 overflow-y-auto mb-4 space-y-4 px-2 bg-background/50 rounded-2xl p-4">
                 {messages.length === 0 && (
                   <div className="text-center text-muted-foreground py-20">
                     <Icon name="MessageCircle" size={48} className="mx-auto mb-4 opacity-50" />
                     <p>Начните диалог с Aisi на выбранном языке</p>
+                    <p className="text-sm mt-2">Используйте микрофон для голосового ввода</p>
                   </div>
                 )}
                 
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-start gap-4 ${msg.role === 'assistant' ? 'flex-row-reverse' : ''}`}
+                    className={`flex items-start gap-3 animate-fade-in ${msg.role === 'assistant' ? 'flex-row-reverse' : ''}`}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
                       <Icon name={msg.role === 'user' ? 'User' : 'Bot'} size={20} className="text-white" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 max-w-[80%]">
                       <div
                         className={`rounded-2xl p-4 ${
                           msg.role === 'user'
@@ -351,7 +420,7 @@ const Index = () => {
                             : 'bg-gradient-to-br from-primary/20 to-secondary/20 rounded-tr-none border border-primary/30'
                         }`}
                       >
-                        <p className="text-foreground">{msg.content}</p>
+                        <p className="text-foreground break-words">{msg.content}</p>
                       </div>
                     </div>
                     {msg.role === 'assistant' && (
@@ -359,7 +428,7 @@ const Index = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => speakText(msg.content)}
-                        className="mt-2"
+                        className="mt-2 flex-shrink-0"
                       >
                         <Icon name={isSpeaking ? 'Volume2' : 'VolumeX'} size={16} />
                       </Button>
@@ -370,9 +439,20 @@ const Index = () => {
               </div>
 
               <form onSubmit={handleChatSubmit} className="flex gap-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={startVoiceRecognition}
+                  className={`rounded-2xl border-border ${
+                    isRecording ? 'bg-red-500/20 border-red-500' : ''
+                  }`}
+                >
+                  <Icon name={isRecording ? 'MicOff' : 'Mic'} size={20} className={isRecording ? 'text-red-500' : ''} />
+                </Button>
                 <Input
                   type="text"
-                  placeholder="Напишите сообщение..."
+                  placeholder="Напишите сообщение или используйте микрофон..."
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   className="flex-1 bg-muted border-border rounded-2xl"
@@ -380,11 +460,61 @@ const Index = () => {
                 <Button
                   type="submit"
                   size="lg"
-                  className="bg-gradient-to-r from-primary to-secondary text-white rounded-2xl"
+                  disabled={!chatInput.trim()}
+                  className="bg-gradient-to-r from-primary to-secondary text-white rounded-2xl disabled:opacity-50"
                 >
                   <Icon name="Send" size={20} />
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <section id="demo" className="py-20 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <h2 className="text-4xl font-bold text-center mb-12">Попробуйте Демо</h2>
+          <Card className="bg-gradient-to-br from-card to-card/50 border-border">
+            <CardContent className="pt-8">
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <p className="text-muted-foreground mb-4">
+                    Откройте чат, нажав на иконку сообщений в правом верхнем углу
+                  </p>
+                  <Button
+                    size="lg"
+                    onClick={() => setIsChatOpen(true)}
+                    className="bg-gradient-to-r from-primary to-secondary text-white"
+                  >
+                    <Icon name="MessageSquare" size={20} className="mr-2" />
+                    Открыть чат с Aisi
+                  </Button>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                    <Icon name="User" size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="bg-muted rounded-2xl rounded-tl-none p-4">
+                      <p className="text-foreground">Привет, Aisi! Как погода сегодня?</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 flex-row-reverse">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center flex-shrink-0">
+                    <Icon name="Bot" size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl rounded-tr-none p-4 border border-primary/30">
+                      <p className="text-foreground">
+                        Сейчас проверю погоду для вас. В вашем регионе ожидается солнечная погода, температура +22°C. Отличный день для прогулки!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
