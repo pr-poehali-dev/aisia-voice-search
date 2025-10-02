@@ -205,8 +205,8 @@ const Index = () => {
             </div>
           </div>
           <div className="hidden md:flex gap-6">
-            {['Главная', 'Возможности', 'Демо', 'API', 'Контакты'].map((item, idx) => {
-              const id = ['home', 'features', 'demo', 'api', 'contacts'][idx];
+            {['Главная', 'Возможности', 'Демо', 'API'].map((item, idx) => {
+              const id = ['home', 'features', 'demo', 'api'][idx];
               return (
                 <button
                   key={item}
@@ -671,29 +671,6 @@ const Index = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      <section id="contacts" className="py-20 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
-          <h2 className="text-4xl font-bold mb-6">Свяжитесь с нами</h2>
-          <p className="text-muted-foreground mb-8 text-lg">
-            Готовы интегрировать Aisi в ваш проект? Напишите нам!
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-gradient-to-r from-primary to-secondary text-white">
-              <Icon name="Mail" size={20} className="mr-2" />
-              info@aisi.dev
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10">
-              <Icon name="MessageCircle" size={20} className="mr-2" />
-              Telegram
-            </Button>
-            <Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10">
-              <Icon name="Github" size={20} className="mr-2" />
-              GitHub
-            </Button>
           </div>
         </div>
       </section>
