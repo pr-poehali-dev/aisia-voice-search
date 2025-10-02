@@ -22,6 +22,7 @@ const Index = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -174,13 +175,21 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-card to-background">
       <nav className="fixed top-0 w-full z-50 bg-card/80 backdrop-blur-lg border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
               <Icon name="Mic" size={20} className="text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               Aisi
             </span>
+            <Button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              variant="ghost"
+              size="sm"
+              className="rounded-full w-8 h-8 p-0 hover:bg-primary/10"
+            >
+              <Icon name="HelpCircle" size={20} className="text-primary" />
+            </Button>
           </div>
           <div className="flex items-center gap-6">
             <div className="hidden md:flex gap-6">
@@ -254,50 +263,10 @@ const Index = () => {
               </div>
             )}
 
-            <div className="w-full max-w-2xl space-y-4">
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                  <Icon
-                    name="Search"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    size={20}
-                  />
-                  <Input
-                    type="text"
-                    placeholder="Поиск в интернете или голосовая команда..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-12 pr-4 py-6 text-lg bg-card border-border rounded-2xl focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </form>
-
-              {isSearching && (
-                <div className="text-center text-primary animate-pulse">
-                  Поиск в интернете...
-                </div>
-              )}
-
-              {searchResults.length > 0 && (
-                <div className="space-y-3">
-                  {searchResults.map((result, idx) => (
-                    <Card key={idx} className="bg-card/80 border-border">
-                      <CardContent className="pt-4">
-                        <h3 className="font-semibold text-primary mb-1">{result.title}</h3>
-                        <p className="text-sm text-muted-foreground">{result.snippet}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    onClick={() => setSearchResults([])}
-                    className="w-full text-muted-foreground"
-                  >
-                    <Icon name="X" size={16} className="mr-2" />
-                    Очистить результаты
-                  </Button>
-                </div>
-              )}
+            <div className="w-full max-w-2xl">
+              <div className="text-center text-muted-foreground mb-4">
+                <p className="text-lg">Используйте кнопку поиска ❓ в навигации для интеллектуального поиска</p>
+              </div>
             </div>
           </div>
         </div>
@@ -355,6 +324,114 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {isSearchOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-3xl bg-card border-border shadow-2xl animate-scale-in max-h-[90vh] overflow-hidden flex flex-col">
+            <CardContent className="pt-6 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <Icon name="Search" size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Поиск с Aisi</h3>
+                    <p className="text-sm text-muted-foreground">Интеллектуальный поиск по интернету</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsSearchOpen(false);
+                    setSearchResults([]);
+                    setSearchQuery('');
+                  }}
+                  className="rounded-full"
+                >
+                  <Icon name="X" size={20} />
+                </Button>
+              </div>
+
+              <form onSubmit={handleSearch} className="mb-4">
+                <div className="relative">
+                  <Icon
+                    name="Search"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={20}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Введите поисковый запрос..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 pr-4 py-6 text-lg bg-muted border-border rounded-2xl focus:ring-2 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
+              </form>
+
+              {isSearching && (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin mb-4">
+                    <Icon name="Loader2" size={40} className="text-primary" />
+                  </div>
+                  <p className="text-primary">Aisi ищет информацию в интернете...</p>
+                </div>
+              )}
+
+              {!isSearching && searchResults.length > 0 && (
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Icon name="Sparkles" size={20} className="text-primary" />
+                    <p className="text-sm text-muted-foreground">
+                      Найдено {searchResults.length} результатов по запросу "{searchQuery}"
+                    </p>
+                  </div>
+                  
+                  {searchResults.map((result, idx) => (
+                    <Card key={idx} className="bg-gradient-to-br from-card to-card/50 border-border hover:border-primary/50 transition-all">
+                      <CardContent className="pt-4">
+                        <div className="flex gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                            <Icon name="Globe" size={20} className="text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-primary mb-2">{result.title}</h3>
+                            <p className="text-muted-foreground leading-relaxed">{result.snippet}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  <div className="sticky bottom-0 pt-4 bg-card">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchResults([]);
+                        setSearchQuery('');
+                      }}
+                      className="w-full border-border hover:bg-primary/10"
+                    >
+                      <Icon name="RotateCcw" size={16} className="mr-2" />
+                      Новый поиск
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!isSearching && searchResults.length === 0 && searchQuery === '' && (
+                <div className="text-center py-20 text-muted-foreground">
+                  <Icon name="Search" size={64} className="mx-auto mb-4 opacity-30" />
+                  <p className="text-lg">Введите запрос для поиска</p>
+                  <p className="text-sm mt-2">Aisi найдёт для вас актуальную информацию</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {isChatOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
